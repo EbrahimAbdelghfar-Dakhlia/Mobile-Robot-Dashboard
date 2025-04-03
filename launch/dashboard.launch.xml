@@ -1,0 +1,4 @@
+<launch>
+    <node pkg="dashboard" exec="dashboard_bridge" name="bridge" namespace=""/>
+    <node pkg="dashboard" exec="webserver_runner" name="webserver" namespace=""/>
+</launch>
