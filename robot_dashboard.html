@@ -6,6 +6,9 @@
     <title>Mobile Robot Dashboard</title>
     <!-- Add Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Add Leaflet.js for map rendering -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         :root {
             /* Light theme variables */
@@ -35,6 +38,10 @@
             --text-secondary: #a0a0a0;
             --border-color: #333333;
             --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        [data-theme="dark"] .sensors-status {
+            background: linear-gradient(135deg, #2a2a2a, #1e1e1e);
         }
 
         * {
@@ -152,6 +159,14 @@
             gap: 8px 12px;
             font-size: 14px;
             margin-top: 0.5rem;
+        }
+
+        .battery-details .label {
+            color: var(--text-secondary);
+        }
+
+        .battery-details .value {
+            font-weight: bold;
         }
 
         .battery-icon-container {
@@ -439,6 +454,48 @@
                 font-size: 36px;
             }
         }
+
+        /* New styles for sensor status card */
+        .sensors-status {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.75rem;
+            background: linear-gradient(135deg, #e0f7fa, #ffffff);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            animation: fadeIn 1s ease-in-out;
+            transition: transform 0.3s ease;
+        }
+
+        .sensors-status .label {
+            color: var(--text-secondary);
+        }
+
+        .sensors-status .value {
+            font-weight: bold;
+        }
+
+        .sensors-status:hover {
+            transform: scale(1.02);
+        }
+        .sensor-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .sensor-item:last-child {
+            border-bottom: none;
+        }
+        .sensor-status-icon {
+            font-size: 1.2rem;
+            margin-right: 8px;
+            transition: color 0.3s ease, transform 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
@@ -545,8 +602,48 @@
                 <div class="orientation-cube" id="orientation-cube"></div>
             </div>
 
+            <!-- Sensors Status Card -->
+            <div class="card">
+                <div class="card-title">
+                    <div class="card-title-left">
+                        <i class="fas fa-cogs card-icon"></i>
+                        Sensors Status
+                    </div>
+                </div>
+                <div class="sensors-status">
+                    <div class="sensor-item">
+                        <span class="label">Lidar:</span>
+                        <div>
+                            <i class="fas fa-circle sensor-status-icon" id="lidar-icon"></i>
+                            <span class="value" id="lidar-status">N/A</span>
+                        </div>
+                    </div>
+                    <div class="sensor-item">
+                        <span class="label">Camera:</span>
+                        <div>
+                            <i class="fas fa-circle sensor-status-icon" id="sensor-camera-icon"></i>
+                            <span class="value" id="sensor-camera-status">N/A</span>
+                        </div>
+                    </div>
+                    <div class="sensor-item">
+                        <span class="label">Encoder:</span>
+                        <div>
+                            <i class="fas fa-circle sensor-status-icon" id="encoder-icon"></i>
+                            <span class="value" id="encoder-status">N/A</span>
+                        </div>
+                    </div>
+                    <div class="sensor-item">
+                        <span class="label">IMU:</span>
+                        <div>
+                            <i class="fas fa-circle sensor-status-icon" id="imu-icon"></i>
+                            <span class="value" id="imu-status">N/A</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Camera Feed -->
-            <div class="card" style="grid-column: span 2;">
+            <div class="card" style="grid-column: span 3;">
                 <div class="card-title">
                     <div class="card-title-left">
                         <i class="fas fa-video card-icon"></i>
@@ -560,6 +657,17 @@
                         <p>Connecting to camera...</p>
                     </div>
                 </div>
+            </div>
+
+            <!-- Map Card -->
+            <div class="card" style="grid-column: span 3;">
+                <div class="card-title">
+                    <div class="card-title-left">
+                        <i class="fas fa-map-marker-alt card-icon"></i>
+                        Robot Location
+                    </div>
+                </div>
+                <div id="map" style="height: 400px; border-radius: 8px;"></div>
             </div>
         </div>
     </div>
@@ -607,6 +715,12 @@
         const ipAddress = document.getElementById('ip-address');
         const connectionType = document.getElementById('connection-type');
         const networkLatency = document.getElementById('network-latency');
+
+        // Add new sensor DOM variables.
+        const lidarStatus = document.getElementById('lidar-status');
+        const sensorCameraStatus = document.getElementById('sensor-camera-status');
+        const encoderStatus = document.getElementById('encoder-status');
+        const imuStatus = document.getElementById('imu-status');
 
         // Theme Toggle Functionality
         themeToggle.addEventListener('click', () => {
@@ -858,6 +972,37 @@
                 cameraLoading.style.display = 'flex';
             }
             
+            // Update sensors status with animated icon color based on status
+            if (data.sensors) {
+                // Helper to update an icon's color
+                function updateIcon(iconId, status) {
+                    const icon = document.getElementById(iconId);
+                    if (status === "OK") {
+                        icon.style.color = '#4caf50';
+                    } else if (status === "Warning") {
+                        icon.style.color = '#ff9800';
+                    } else if (status === "Fail") {
+                        icon.style.color = '#f44336';
+                    } else {
+                        icon.style.color = 'var(--text-color)';
+                    }
+                }
+                // Update text and icon colors
+                lidarStatus.textContent = data.sensors.lidar;
+                updateIcon('lidar-icon', data.sensors.lidar);
+                sensorCameraStatus.textContent = data.sensors.camera;
+                updateIcon('sensor-camera-icon', data.sensors.camera);
+                encoderStatus.textContent = data.sensors.encoder;
+                updateIcon('encoder-icon', data.sensors.encoder);
+                imuStatus.textContent = data.sensors.imu;
+                updateIcon('imu-icon', data.sensors.imu);
+            }
+            
+            // Update map location
+            if (data.location) {
+                updateMap(data.location.latitude, data.location.longitude);
+            }
+            
             // Add logs if any
             if (data.logs && data.logs.length > 0) {
                 data.logs.forEach(log => {
@@ -880,6 +1025,27 @@
                 "Camera feed unavailable"
             );
         };
+
+        // Initialize the map
+        let map, marker;
+        function initMap() {
+            map = L.map('map').setView([0, 0], 15); // Default to (0, 0) with zoom level 15
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+            marker = L.marker([0, 0]).addTo(map).bindPopup("Robot Location").openPopup();
+        }
+
+        // Update the map with the robot's location
+        function updateMap(latitude, longitude) {
+            if (map && marker) {
+                marker.setLatLng([latitude, longitude]);
+                map.setView([latitude, longitude], 15);
+            }
+        }
+
+        // Initialize the map on page load
+        document.addEventListener('DOMContentLoaded', initMap);
 
         // Connect WebSocket when page loads
         document.addEventListener('DOMContentLoaded', () => {
@@ -911,7 +1077,17 @@
                 },
                 robot_id: "ROB-001",
                 imu: {pitch: 10, roll: -5, yaw: 90},
-                camera_feed: "https://picsum.photos/800/450" // Placeholder image
+                camera_feed: "https://picsum.photos/800/450", // Placeholder image
+                sensors: {
+                    lidar: "Active",
+                    camera: "Active",
+                    encoder: "Active",
+                    imu: "Active"
+                },
+                location: {
+                    latitude: 37.7749,
+                    longitude: -122.4194
+                }
             };
             
             updateDashboard(mockData);
@@ -957,6 +1133,12 @@
                     if (mockData.logs.length > 100) {
                         mockData.logs.shift();
                     }
+                }
+                
+                // Update location occasionally
+                if (Math.random() > 0.9) {
+                    mockData.location.latitude += (Math.random() - 0.5) * 0.001;
+                    mockData.location.longitude += (Math.random() - 0.5) * 0.001;
                 }
                 
                 updateDashboard(mockData);

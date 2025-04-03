@@ -25,6 +25,8 @@ class RobotDataGenerator:
         self.roll = 0
         self.yaw = 0
         self.logs = []
+        self.latitude = 37.7749  # Default latitude (San Francisco)
+        self.longitude = -122.4194  # Default longitude (San Francisco)
     
     def generate_data(self):
         # Simulate changes in robot data
@@ -104,6 +106,19 @@ class RobotDataGenerator:
         # Only keep the last 5 logs to send (to prevent the message from getting too large)
         send_logs = self.logs[-5:] if self.logs else []
         
+        # New part: simulate sensor statuses
+        sensor_statuses = ["OK", "Warning", "Fail"]
+        sensors = {
+            "lidar": random.choice(sensor_statuses),
+            "camera": random.choice(sensor_statuses),
+            "encoder": random.choice(sensor_statuses),
+            "imu": random.choice(sensor_statuses)
+        }
+        
+        # Simulate location changes
+        self.latitude += (random.random() - 0.5) * 0.0001  # Small random movement
+        self.longitude += (random.random() - 0.5) * 0.0001  # Small random movement
+
         # Construct the data packet
         data = {
             "linear_velocity": self.linear_velocity,
@@ -124,7 +139,12 @@ class RobotDataGenerator:
             },
             "robot_id": self.robot_id,
             "imu": {"pitch": self.pitch, "roll": self.roll, "yaw": self.yaw},
-            "camera_feed": "https://picsum.photos/800/450?random=" + str(random.randint(1, 1000))  # Random placeholder image
+            "camera_feed": "https://picsum.photos/800/450?random=" + str(random.randint(1, 1000)),
+            "sensors": sensors,
+            "location": {
+                "latitude": self.latitude,
+                "longitude": self.longitude
+            }
         }
         
         return data
