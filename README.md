@@ -111,6 +111,8 @@ The dashboard will automatically open in your default web browser. If not, navig
 ```
 http://localhost:8000/robot_dashboard.html
 ```
+# Video
+[Screencast from 2025-04-13 17-22-06.webm](https://github.com/user-attachments/assets/80b197d7-4272-4c07-a9cb-2711a812847a)
 
 ## Contributing
 Feel free to contribute to this project by adding new features or improving existing functionality. Submit a pull request or open an issue for discussion.
