@@ -65,6 +65,23 @@
             padding: 1rem;
         }
 
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header-logo {
+            height: 100px;
+            width: auto;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+        }
+
+        .dk-logo {
+            height: 110px;
+            width: auto;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+        }
         header {
             display: flex;
             justify-content: space-between;
@@ -91,7 +108,7 @@
         }
 
         .robot-id {
-            font-size: 18px;
+            font-size: 30px;
             font-weight: bold;
             color: var(--primary-color);
         }
@@ -501,7 +518,8 @@
 <body>
     <div class="container">
         <header>
-            <div class="robot-id" id="robot-id">ROB-001</div>
+            <a href="https://imgbb.com/"><img src="https://i.ibb.co/WW0msTn1/image-removebg-preview.png" alt="dk logo" class="dk-logo"></a>
+            <div class="robot-id" id="robot-id"><h1>ROB-001</h1></div>
             <button class="theme-toggle" id="theme-toggle">☀️</button>
         </header>
 
